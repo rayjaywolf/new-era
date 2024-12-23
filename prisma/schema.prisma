@@ -19,7 +19,6 @@ model Project {
 
   // Relations
   workers   WorkerAssignment[]
-  materials MaterialUsage[]
   machinery MachineryUsage[]
 
   createdAt DateTime @default(now())
@@ -90,45 +89,6 @@ model Advance {
   amount   Float
   date     DateTime
   isPaid   Boolean  @default(false)
-
-  createdAt DateTime @default(now())
-}
-
-model Material {
-  id          String       @id @default(cuid())
-  type        MaterialType
-  unit        String
-  currentRate Float
-  dateAdded   DateTime
-
-  // Relations
-  usage MaterialUsage[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-enum MaterialType {
-  STEEL
-  CEMENT
-  SAND
-  GRIT_10MM
-  GRIT_20MM
-  GRIT_40MM
-  BRICK
-  STONE
-  WATER
-}
-
-model MaterialUsage {
-  id         String   @id @default(cuid())
-  material   Material @relation(fields: [materialId], references: [id])
-  materialId String
-  project    Project  @relation(fields: [projectId], references: [id])
-  projectId  String
-  quantity   Float
-  rate       Float
-  date       DateTime
 
   createdAt DateTime @default(now())
 }
