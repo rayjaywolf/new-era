@@ -2,8 +2,10 @@ import { notFound } from "next/navigation";
 import { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
 import { formatDate } from "@/lib/utils";
+import { getMaterialUnit } from "@/lib/utils/materials";
 import { Badge } from "@/components/ui/badge";
 import AddWorkerButton from "@/components/projects/add-worker-button";
+import AddMaterialButton from "@/components/projects/add-material-button";
 import {
   Card,
   CardContent,
@@ -12,6 +14,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import ProjectMusterRoll from "@/components/projects/project-muster-roll";
+import { MaterialType } from "@prisma/client";
 
 interface ProjectPageProps {
   params: {
@@ -57,11 +60,7 @@ async function getProject(id: string) {
           },
         },
       },
-      materials: {
-        include: {
-          material: true,
-        },
-      },
+      materials: true,
       machinery: {
         include: {
           machinery: true,
@@ -153,6 +152,7 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
                   Materials used in this project
                 </CardDescription>
               </div>
+              <AddMaterialButton projectId={project.id} />
             </div>
           </CardHeader>
           <CardContent>
@@ -162,12 +162,14 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {project.materials.map((usage) => (
                   <div key={usage.id} className="space-y-1">
-                    <p className="font-medium">{usage.material.name}</p>
-                    <p className="text-sm text-muted-foreground">
-                      Quantity: {usage.quantity} {usage.material.unit}
+                    <p className="font-medium">
+                      {usage.type.replace(/_/g, " ")}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      Rate: ₹{usage.rate}
+                      Volume: {usage.volume} {getMaterialUnit(usage.type)}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Cost: ₹{usage.cost}
                     </p>
                   </div>
                 ))}

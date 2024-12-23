@@ -20,6 +20,7 @@ model Project {
   // Relations
   workers   WorkerAssignment[]
   machinery MachineryUsage[]
+  materials MaterialUsage[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -122,4 +123,31 @@ model MachineryUsage {
   date        DateTime
 
   createdAt DateTime @default(now())
+}
+
+enum MaterialType {
+  STEEL
+  CEMENT
+  SAND
+  GRIT_10MM
+  GRIT_20MM
+  GRIT_40MM
+  BRICK
+  STONE
+  WATER
+}
+
+model MaterialUsage {
+  id        String       @id @default(cuid())
+  project   Project      @relation(fields: [projectId], references: [id])
+  projectId String
+  type      MaterialType
+  volume    Float
+  cost      Float
+  date      DateTime     @default(now())
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
 }
