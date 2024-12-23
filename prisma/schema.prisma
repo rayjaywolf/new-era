@@ -1,0 +1,165 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider     = "postgresql"
+  url          = env("DATABASE_URL")
+  relationMode = "prisma"
+}
+
+model Project {
+  id         String        @id @default(cuid())
+  projectId  String        @unique
+  location   String
+  clientName String
+  startDate  DateTime
+  endDate    DateTime?
+  status     ProjectStatus @default(ONGOING)
+
+  // Relations
+  workers   WorkerAssignment[]
+  materials MaterialUsage[]
+  machinery MachineryUsage[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum ProjectStatus {
+  ONGOING
+  COMPLETED
+  SUSPENDED
+}
+
+model Worker {
+  id          String     @id @default(cuid())
+  name        String
+  type        WorkerType
+  hourlyRate  Float
+  phoneNumber String?
+  isActive    Boolean    @default(true)
+
+  // Relations
+  assignments WorkerAssignment[]
+  attendance  Attendance[]
+  advances    Advance[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum WorkerType {
+  FOREMAN
+  MASON
+  BALDAR
+  COOLIE
+  MACHINERY_OPERATOR
+  OFFICE_STAFF
+}
+
+model WorkerAssignment {
+  id        String    @id @default(cuid())
+  worker    Worker    @relation(fields: [workerId], references: [id])
+  workerId  String
+  project   Project   @relation(fields: [projectId], references: [id])
+  projectId String
+  startDate DateTime
+  endDate   DateTime?
+
+  @@unique([workerId, projectId])
+}
+
+model Attendance {
+  id          String   @id @default(cuid())
+  worker      Worker   @relation(fields: [workerId], references: [id])
+  workerId    String
+  date        DateTime
+  hoursWorked Float
+  overtime    Float    @default(0)
+
+  createdAt DateTime @default(now())
+
+  @@unique([workerId, date])
+}
+
+model Advance {
+  id       String   @id @default(cuid())
+  worker   Worker   @relation(fields: [workerId], references: [id])
+  workerId String
+  amount   Float
+  date     DateTime
+  isPaid   Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+}
+
+model Material {
+  id          String       @id @default(cuid())
+  type        MaterialType
+  unit        String
+  currentRate Float
+  dateAdded   DateTime
+
+  // Relations
+  usage MaterialUsage[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum MaterialType {
+  STEEL
+  CEMENT
+  SAND
+  GRIT_10MM
+  GRIT_20MM
+  GRIT_40MM
+  BRICK
+  STONE
+  WATER
+}
+
+model MaterialUsage {
+  id         String   @id @default(cuid())
+  material   Material @relation(fields: [materialId], references: [id])
+  materialId String
+  project    Project  @relation(fields: [projectId], references: [id])
+  projectId  String
+  quantity   Float
+  rate       Float
+  date       DateTime
+
+  createdAt DateTime @default(now())
+}
+
+model Machinery {
+  id         String        @id @default(cuid())
+  name       String
+  type       MachineryType
+  subtype    String
+  hourlyRate Float
+
+  // Relations
+  usage MachineryUsage[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum MachineryType {
+  JCB
+  SLM
+}
+
+model MachineryUsage {
+  id          String    @id @default(cuid())
+  machinery   Machinery @relation(fields: [machineryId], references: [id])
+  machineryId String
+  project     Project   @relation(fields: [projectId], references: [id])
+  projectId   String
+  hoursUsed   Float
+  date        DateTime
+
+  createdAt DateTime @default(now())
+}
