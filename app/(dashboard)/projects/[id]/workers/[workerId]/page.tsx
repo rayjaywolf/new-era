@@ -10,10 +10,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { EditWorkerDialog } from "./edit-worker-dialog";
 
 interface ProjectWorkerPageProps {
   params: {
-    id: string;      // Project ID
+    id: string; // Project ID
     workerId: string; // Worker ID
   };
 }
@@ -36,6 +37,8 @@ export async function generateMetadata({
 }
 
 async function getProjectWorkerData(projectId: string, workerId: string) {
+  console.log("Fetching project worker data:", { projectId, workerId });
+
   const assignment = await prisma.workerAssignment.findUnique({
     where: {
       workerId_projectId: {
@@ -47,6 +50,9 @@ async function getProjectWorkerData(projectId: string, workerId: string) {
       worker: {
         include: {
           attendance: {
+            where: {
+              projectId,
+            },
             orderBy: {
               date: "desc",
             },
@@ -67,12 +73,21 @@ async function getProjectWorkerData(projectId: string, workerId: string) {
     },
   });
 
-  if (!assignment) return null;
+  console.log("Found worker assignment:", {
+    found: !!assignment,
+    workerId: assignment?.workerId,
+    projectId: assignment?.projectId,
+    attendanceCount: assignment?.worker.attendance.length,
+    attendance: assignment?.worker.attendance,
+  });
 
+  if (!assignment) return null;
   return assignment;
 }
 
-export default async function ProjectWorkerPage({ params }: ProjectWorkerPageProps) {
+export default async function ProjectWorkerPage({
+  params,
+}: ProjectWorkerPageProps) {
   const data = await getProjectWorkerData(params.id, params.workerId);
 
   if (!data) {
@@ -85,14 +100,23 @@ export default async function ProjectWorkerPage({ params }: ProjectWorkerPagePro
   const projectStartDate = data.startDate;
   const projectEndDate = data.endDate || new Date();
 
-  // Filter attendance records for this project's duration
-  const projectAttendance = worker.attendance.filter(
-    (record) =>
-      record.date >= projectStartDate && record.date <= projectEndDate
-  );
+  console.log("Project dates:", {
+    startDate: projectStartDate,
+    endDate: projectEndDate,
+    totalAttendance: worker.attendance.length,
+  });
+
+  // Project attendance is already filtered by projectId in the query
+  const projectAttendance = worker.attendance;
+
+  console.log("Project attendance:", {
+    total: projectAttendance.length,
+    records: projectAttendance,
+  });
 
   // Calculate project-specific earnings
   const projectEarnings = projectAttendance.reduce((sum, record) => {
+    if (!record.present) return sum;
     const regularPay = record.hoursWorked * worker.hourlyRate;
     const overtimePay = record.overtime * (worker.hourlyRate * 1.5);
     return sum + regularPay + overtimePay;
@@ -105,23 +129,25 @@ export default async function ProjectWorkerPage({ params }: ProjectWorkerPagePro
   );
 
   const monthlyStats = {
-    totalDays: currentMonthAttendance.length,
+    totalDays: currentMonthAttendance.filter((record) => record.present).length,
     totalHours: currentMonthAttendance.reduce(
-      (sum, record) => sum + record.hoursWorked + record.overtime,
+      (sum, record) =>
+        record.present ? sum + record.hoursWorked + record.overtime : sum,
       0
     ),
     regularHours: currentMonthAttendance.reduce(
-      (sum, record) => sum + record.hoursWorked,
+      (sum, record) => (record.present ? sum + record.hoursWorked : sum),
       0
     ),
     overtimeHours: currentMonthAttendance.reduce(
-      (sum, record) => sum + record.overtime,
+      (sum, record) => (record.present ? sum + record.overtime : sum),
       0
     ),
   };
 
   // Calculate monthly earnings
   const monthlyEarnings = currentMonthAttendance.reduce((sum, record) => {
+    if (!record.present) return sum;
     const regularPay = record.hoursWorked * worker.hourlyRate;
     const overtimePay = record.overtime * (worker.hourlyRate * 1.5);
     return sum + regularPay + overtimePay;
@@ -141,13 +167,9 @@ export default async function ProjectWorkerPage({ params }: ProjectWorkerPagePro
           <div className="flex items-center justify-between">
             <div>
               <CardTitle>{worker.name}</CardTitle>
-              <CardDescription>
-                {worker.type} • {project.projectId}
-              </CardDescription>
+              <CardDescription>{worker.type}</CardDescription>
             </div>
-            <Badge>
-              {data.endDate ? "Completed" : "Active"}
-            </Badge>
+            <EditWorkerDialog worker={worker} />
           </div>
         </CardHeader>
         <CardContent>
@@ -174,7 +196,7 @@ export default async function ProjectWorkerPage({ params }: ProjectWorkerPagePro
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-medium">Days Worked</CardTitle>
+            <CardTitle className="text-sm font-medium">Days Present</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{monthlyStats.totalDays}</div>
@@ -188,26 +210,35 @@ export default async function ProjectWorkerPage({ params }: ProjectWorkerPagePro
           <CardContent>
             <div className="text-2xl font-bold">{monthlyStats.totalHours}</div>
             <p className="text-xs text-muted-foreground">
-              Regular: {monthlyStats.regularHours} | OT: {monthlyStats.overtimeHours}
+              Regular: {monthlyStats.regularHours} | OT:{" "}
+              {monthlyStats.overtimeHours}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-medium">Monthly Earnings</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Monthly Earnings
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">₹{monthlyEarnings.toLocaleString()}</div>
+            <div className="text-2xl font-bold">
+              ₹{monthlyEarnings.toLocaleString()}
+            </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-medium">Monthly Advances</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Monthly Advances
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">₹{monthlyAdvances.toLocaleString()}</div>
+            <div className="text-2xl font-bold">
+              ₹{monthlyAdvances.toLocaleString()}
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -220,7 +251,9 @@ export default async function ProjectWorkerPage({ params }: ProjectWorkerPagePro
         </CardHeader>
         <CardContent>
           {projectAttendance.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No attendance records found</p>
+            <p className="text-sm text-muted-foreground">
+              No attendance records found
+            </p>
           ) : (
             <div className="space-y-4">
               {projectAttendance.slice(0, 10).map((record) => (
@@ -231,12 +264,29 @@ export default async function ProjectWorkerPage({ params }: ProjectWorkerPagePro
                   <div>
                     <div className="font-medium">{formatDate(record.date)}</div>
                     <div className="text-sm text-muted-foreground">
-                      Regular: {record.hoursWorked} hrs | Overtime: {record.overtime} hrs
+                      {record.present ? (
+                        <>
+                          Regular: {record.hoursWorked} hrs | Overtime:{" "}
+                          {record.overtime} hrs
+                        </>
+                      ) : (
+                        "Absent"
+                      )}
                     </div>
                   </div>
                   <div className="text-right">
                     <div className="font-medium">
-                      ₹{(record.hoursWorked * worker.hourlyRate + record.overtime * worker.hourlyRate * 1.5).toLocaleString()}
+                      {record.present ? (
+                        <>
+                          ₹
+                          {(
+                            record.hoursWorked * worker.hourlyRate +
+                            record.overtime * worker.hourlyRate * 1.5
+                          ).toLocaleString()}
+                        </>
+                      ) : (
+                        "₹0"
+                      )}
                     </div>
                   </div>
                 </div>
@@ -263,7 +313,9 @@ export default async function ProjectWorkerPage({ params }: ProjectWorkerPagePro
                   className="flex items-center justify-between border-b pb-4 last:border-0 last:pb-0"
                 >
                   <div>
-                    <div className="font-medium">₹{advance.amount.toLocaleString()}</div>
+                    <div className="font-medium">
+                      ₹{advance.amount.toLocaleString()}
+                    </div>
                     <div className="text-sm text-muted-foreground">
                       {formatDate(advance.date)}
                     </div>

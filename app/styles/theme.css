@@ -1,0 +1,35 @@
+:root {
+  /* Material Design Dark Theme Colors */
+  --primary: #BB86FC;
+  --primary-variant: #3700B3;
+  --secondary: #03DAC6;
+  --background: #121212;
+  --surface: #121212;
+  --error: #CF6679;
+  --on-primary: #000000;
+  --on-secondary: #000000;
+  --on-background: #FFFFFF;
+  --on-surface: #FFFFFF;
+  --on-error: #000000;
+
+  /* Surface overlay colors for elevation */
+  --surface-1dp: #1E1E1E;
+  --surface-2dp: #232323;
+  --surface-3dp: #252525;
+  --surface-4dp: #272727;
+  --surface-6dp: #2C2C2C;
+  --surface-8dp: #2E2E2E;
+  --surface-12dp: #333333;
+  --surface-16dp: #363636;
+  --surface-24dp: #383838;
+
+  /* Additional colors for states */
+  --surface-hover: rgba(255, 255, 255, 0.08);
+  --surface-selected: rgba(255, 255, 255, 0.16);
+  --surface-pressed: rgba(255, 255, 255, 0.12);
+  --surface-disabled: rgba(255, 255, 255, 0.12);
+  --on-surface-disabled: rgba(255, 255, 255, 0.38);
+
+  /* Border radius */
+  --radius: 4px;
+}

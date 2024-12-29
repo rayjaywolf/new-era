@@ -40,12 +40,15 @@ async function getWorker(id: string) {
   startOfMonth.setDate(1);
   startOfMonth.setHours(0, 0, 0, 0);
 
-  return await prisma.worker.findUnique({
+  const worker = await prisma.worker.findUnique({
     where: { id },
     include: {
       attendance: {
         orderBy: {
           date: "desc",
+        },
+        where: {
+          present: true,
         },
       },
       advances: {
@@ -63,6 +66,9 @@ async function getWorker(id: string) {
       },
     },
   });
+
+  console.log('Worker attendance:', worker?.attendance);
+  return worker;
 }
 
 export default async function WorkerPage({ params }: WorkerPageProps) {
@@ -167,12 +173,20 @@ export default async function WorkerPage({ params }: WorkerPageProps) {
                   <div>
                     <div className="font-medium">{formatDate(record.date)}</div>
                     <div className="text-sm text-muted-foreground">
-                      Regular: {record.hoursWorked} hrs | Overtime: {record.overtime} hrs
+                      {record.present ? (
+                        <>Regular: {record.hoursWorked} hrs | Overtime: {record.overtime} hrs</>
+                      ) : (
+                        "Absent"
+                      )}
                     </div>
                   </div>
                   <div className="text-right">
                     <div className="font-medium">
-                      ₹{(record.hoursWorked * worker.hourlyRate + record.overtime * worker.hourlyRate * 1.5).toLocaleString()}
+                      {record.present ? (
+                        <>₹{(record.hoursWorked * worker.hourlyRate + record.overtime * worker.hourlyRate * 1.5).toLocaleString()}</>
+                      ) : (
+                        "₹0"
+                      )}
                     </div>
                   </div>
                 </div>
