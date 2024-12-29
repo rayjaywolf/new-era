@@ -1,11 +1,13 @@
 import { notFound } from "next/navigation";
 import { Metadata } from "next";
+import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { formatDate } from "@/lib/utils";
 import { getMaterialUnit } from "@/lib/utils/materials";
 import { Badge } from "@/components/ui/badge";
 import AddWorkerButton from "@/components/projects/add-worker-button";
 import AddMaterialButton from "@/components/projects/add-material-button";
+import AddMachineryButton from "@/components/projects/add-machinery-button";
 import {
   Card,
   CardContent,
@@ -61,11 +63,7 @@ async function getProject(id: string) {
         },
       },
       materials: true,
-      machinery: {
-        include: {
-          machinery: true,
-        },
-      },
+      machinery: true,
     },
   });
 }
@@ -121,7 +119,9 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
                   Workers assigned to this project
                 </CardDescription>
               </div>
-              <AddWorkerButton projectId={project.id} />
+              <div className="flex items-center gap-4">
+                <AddWorkerButton projectId={project.id} />
+              </div>
             </div>
           </CardHeader>
           <CardContent>
@@ -130,12 +130,25 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
             ) : (
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {project.workers.map((assignment) => (
-                  <div key={assignment.worker.id} className="space-y-1">
-                    <p className="font-medium">{assignment.worker.name}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {assignment.worker.type}
-                    </p>
-                  </div>
+                  <Link
+                    key={assignment.worker.id}
+                    href={`/projects/${project.id}/workers/${assignment.worker.id}`}
+                  >
+                    <div className="space-y-1 p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
+                      <p className="font-medium">{assignment.worker.name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {assignment.worker.type}
+                      </p>
+                      {assignment.worker.attendance[0] && (
+                        <p className="text-xs text-muted-foreground mt-2">
+                          Today:{" "}
+                          {assignment.worker.attendance[0].hoursWorked +
+                            assignment.worker.attendance[0].overtime}{" "}
+                          hrs
+                        </p>
+                      )}
+                    </div>
+                  </Link>
                 ))}
               </div>
             )}
@@ -152,7 +165,18 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
                   Materials used in this project
                 </CardDescription>
               </div>
-              <AddMaterialButton projectId={project.id} />
+              <div className="flex items-center gap-4">
+                <div className="text-right">
+                  <p className="text-sm font-medium">Total Cost</p>
+                  <p className="text-lg font-bold">
+                    ₹
+                    {project.materials
+                      .reduce((sum, material) => sum + material.cost, 0)
+                      .toLocaleString()}
+                  </p>
+                </div>
+                <AddMaterialButton projectId={project.id} />
+              </div>
             </div>
           </CardHeader>
           <CardContent>
@@ -161,17 +185,25 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
             ) : (
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {project.materials.map((usage) => (
-                  <div key={usage.id} className="space-y-1">
-                    <p className="font-medium">
-                      {usage.type.replace(/_/g, " ")}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      Volume: {usage.volume} {getMaterialUnit(usage.type)}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      Cost: ₹{usage.cost}
-                    </p>
-                  </div>
+                  <Link
+                    key={usage.id}
+                    href={`/projects/${project.id}/material/${usage.id}`}
+                  >
+                    <div className="space-y-1 p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
+                      <p className="font-medium">
+                        {usage.type.replace(/_/g, " ")}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Volume: {usage.volume} {getMaterialUnit(usage.type)}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Cost: ₹{usage.cost.toLocaleString()}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        Added: {formatDate(usage.date)}
+                      </p>
+                    </div>
+                  </Link>
                 ))}
               </div>
             )}
@@ -181,24 +213,62 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
         {/* Machinery Section */}
         <Card>
           <CardHeader>
-            <CardTitle>Machinery</CardTitle>
-            <CardDescription>Machinery used in this project</CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Machinery</CardTitle>
+                <CardDescription>
+                  Machinery used in this project
+                </CardDescription>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="text-right">
+                  <p className="text-sm font-medium">Total Cost</p>
+                  <p className="text-lg font-bold">
+                    ₹
+                    {project.machinery
+                      .reduce((sum, machine) => sum + machine.totalCost, 0)
+                      .toLocaleString()}
+                  </p>
+                </div>
+                <AddMachineryButton projectId={project.id} />
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             {project.machinery.length === 0 ? (
-              <p className="text-muted-foreground">No machinery used yet</p>
+              <div className="text-sm text-muted-foreground">
+                No machinery added yet
+              </div>
             ) : (
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {project.machinery.map((usage) => (
-                  <div key={usage.id} className="space-y-1">
-                    <p className="font-medium">{usage.machinery.name}</p>
-                    <p className="text-sm text-muted-foreground">
-                      Type: {usage.machinery.type} - {usage.machinery.subtype}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      Hours Used: {usage.hoursUsed}
-                    </p>
-                  </div>
+                {project.machinery.map((machine) => (
+                  <Link
+                    key={machine.id}
+                    href={`/projects/${project.id}/machinery/${machine.id}`}
+                  >
+                    <div className="space-y-1 p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
+                      <p className="font-medium">
+                        {machine.type.replace(/_/g, " ")}
+                        {machine.type === "JCB" && machine.jcbSubtype
+                          ? ` - ${machine.jcbSubtype}`
+                          : machine.type === "SLM" && machine.slmSubtype
+                          ? ` - ${machine.slmSubtype}`
+                          : ""}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Hours: {machine.hoursUsed}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Rate: ₹{machine.hourlyRate}/hr
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Total: ₹{machine.totalCost.toLocaleString()}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        Added: {formatDate(machine.date)}
+                      </p>
+                    </div>
+                  </Link>
                 ))}
               </div>
             )}

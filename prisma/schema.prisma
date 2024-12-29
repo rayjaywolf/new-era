@@ -94,35 +94,40 @@ model Advance {
   createdAt DateTime @default(now())
 }
 
-model Machinery {
-  id         String        @id @default(cuid())
-  name       String
-  type       MachineryType
-  subtype    String
-  hourlyRate Float
-
-  // Relations
-  usage MachineryUsage[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
 enum MachineryType {
   JCB
   SLM
 }
 
+enum JCBSubtype {
+  BACKHOE
+  PROCLAIM_81
+  PROCLAIM_140
+  PROCLAIM_210
+}
+
+enum SLMSubtype {
+  SLM_4_3
+  SLM_2_2
+  SLM_2_1
+}
+
 model MachineryUsage {
-  id          String    @id @default(cuid())
-  machinery   Machinery @relation(fields: [machineryId], references: [id])
-  machineryId String
-  project     Project   @relation(fields: [projectId], references: [id])
-  projectId   String
-  hoursUsed   Float
-  date        DateTime
+  id         String        @id @default(cuid())
+  project    Project       @relation(fields: [projectId], references: [id])
+  projectId  String
+  type       MachineryType
+  jcbSubtype JCBSubtype?
+  slmSubtype SLMSubtype?
+  hoursUsed  Float
+  hourlyRate Float
+  date       DateTime
+  totalCost  Float
 
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
 }
 
 enum MaterialType {
