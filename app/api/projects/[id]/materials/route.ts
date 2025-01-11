@@ -8,35 +8,16 @@ export async function POST(
   try {
     const body = await request.json();
 
-    const existingMaterial = await prisma.materialUsage.findFirst({
-      where: {
+    // Create new material entry for each addition
+    const material = await prisma.materialUsage.create({
+      data: {
         projectId: params.id,
         type: body.type,
+        volume: body.volume,
+        cost: body.cost,
+        date: body.date || new Date(), // Use provided date or current date
       },
     });
-
-    let material;
-    if (existingMaterial) {
-      material = await prisma.materialUsage.update({
-        where: {
-          id: existingMaterial.id,
-        },
-        data: {
-          volume: existingMaterial.volume + body.volume,
-          cost: existingMaterial.cost + body.cost,
-        },
-      });
-    } else {
-      // Create new material if none exists
-      material = await prisma.materialUsage.create({
-        data: {
-          projectId: params.id,
-          type: body.type,
-          volume: body.volume,
-          cost: body.cost,
-        },
-      });
-    }
 
     return NextResponse.json(material);
   } catch (error) {

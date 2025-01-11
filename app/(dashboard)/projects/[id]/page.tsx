@@ -44,7 +44,7 @@ export async function generateMetadata({
 async function getProject(id: string) {
   const today = new Date().toISOString().split("T")[0];
 
-  return await prisma.project.findUnique({
+  const project = await prisma.project.findUnique({
     where: { id },
     include: {
       workers: {
@@ -66,6 +66,38 @@ async function getProject(id: string) {
       machinery: true,
     },
   });
+
+  if (!project) return null;
+
+  // Aggregate materials by type
+  const aggregatedMaterials = project.materials.reduce((acc, material) => {
+    const existingMaterial = acc.find((m) => m.type === material.type);
+    if (existingMaterial) {
+      existingMaterial.volume += material.volume;
+      existingMaterial.cost += material.cost;
+    } else {
+      acc.push({ ...material });
+    }
+    return acc;
+  }, [] as typeof project.materials);
+
+  // Aggregate machinery by type
+  const aggregatedMachinery = project.machinery.reduce((acc, machine) => {
+    const existingMachine = acc.find((m) => m.type === machine.type);
+    if (existingMachine) {
+      existingMachine.hours += (machine.hoursUsed || 0);
+      existingMachine.cost += (machine.totalCost || 0);
+    } else {
+      acc.push({ ...machine });
+    }
+    return acc;
+  }, [] as typeof project.machinery);
+
+  return {
+    ...project,
+    materials: aggregatedMaterials,
+    machinery: aggregatedMachinery,
+  };
 }
 
 export default async function ProjectPage({ params }: ProjectPageProps) {
@@ -76,10 +108,10 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
   }
 
   return (
-    <div className="container py-8">
+    <div className="container">
       <div className="grid gap-6">
         {/* Project Overview Card */}
-        <Card>
+        <Card className="bg-white shadow-md hover:shadow-lg transition-shadow">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
@@ -110,7 +142,7 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
         </Card>
 
         {/* Workers Section */}
-        <Card>
+        <Card className="bg-white shadow-md hover:shadow-lg transition-shadow">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
@@ -156,7 +188,7 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
         </Card>
 
         {/* Materials Section */}
-        <Card>
+        <Card className="bg-white shadow-md hover:shadow-lg transition-shadow">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
@@ -186,7 +218,7 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {project.materials.map((usage) => (
                   <Link
-                    key={usage.id}
+                    key={usage.type}
                     href={`/projects/${project.id}/material/${usage.id}`}
                   >
                     <div className="space-y-1 p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
@@ -194,13 +226,14 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
                         {usage.type.replace(/_/g, " ")}
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        Volume: {usage.volume} {getMaterialUnit(usage.type)}
+                        Total Volume: {usage.volume} {getMaterialUnit(usage.type)}
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        Cost: ₹{usage.cost.toLocaleString()}
+                        Total Cost: ₹{usage.cost.toLocaleString()}
                       </p>
-                      <p className="text-xs text-muted-foreground mt-2">
-                        Added: {formatDate(usage.date)}
+                      <p className="text-sm text-muted-foreground">
+                        Rate: ₹{(usage.cost / usage.volume).toFixed(2)} per{" "}
+                        {getMaterialUnit(usage.type)}
                       </p>
                     </div>
                   </Link>
@@ -211,7 +244,7 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
         </Card>
 
         {/* Machinery Section */}
-        <Card>
+        <Card className="bg-white shadow-md hover:shadow-lg transition-shadow">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
@@ -236,36 +269,26 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
           </CardHeader>
           <CardContent>
             {project.machinery.length === 0 ? (
-              <div className="text-sm text-muted-foreground">
-                No machinery added yet
-              </div>
+              <p className="text-muted-foreground">No machinery used yet</p>
             ) : (
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {project.machinery.map((machine) => (
+                {project.machinery.map((usage) => (
                   <Link
-                    key={machine.id}
-                    href={`/projects/${project.id}/machinery/${machine.id}`}
+                    key={usage.type}
+                    href={`/projects/${project.id}/machinery/${usage.id}`}
                   >
                     <div className="space-y-1 p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
                       <p className="font-medium">
-                        {machine.type.replace(/_/g, " ")}
-                        {machine.type === "JCB" && machine.jcbSubtype
-                          ? ` - ${machine.jcbSubtype}`
-                          : machine.type === "SLM" && machine.slmSubtype
-                          ? ` - ${machine.slmSubtype}`
-                          : ""}
+                        {usage.type.replace(/_/g, " ")}
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        Hours: {machine.hoursUsed}
+                        Total Hours: {usage.hoursUsed}
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        Rate: ₹{machine.hourlyRate}/hr
+                        Total Cost: ₹{usage.totalCost.toLocaleString()}
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        Total: ₹{machine.totalCost.toLocaleString()}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-2">
-                        Added: {formatDate(machine.date)}
+                        Rate: ₹{(usage.totalCost / usage.hoursUsed).toFixed(2)} per hour
                       </p>
                     </div>
                   </Link>
@@ -275,7 +298,7 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
           </CardContent>
         </Card>
 
-        <Card className="mt-8">
+        <Card className="mt-8 bg-white shadow-md hover:shadow-lg transition-shadow">
           <CardHeader>
             <CardTitle>Daily Attendance</CardTitle>
             <CardDescription>

@@ -34,7 +34,7 @@ export default async function ProjectMaterialPage({ params }: ProjectMaterialPag
   }
 
   return (
-    <div className="container py-8">
+    <div className="container">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-3xl font-bold">Materials</h1>
         <AddMaterialButton projectId={params.id} />
@@ -46,7 +46,7 @@ export default async function ProjectMaterialPage({ params }: ProjectMaterialPag
         <div className="grid gap-4">
           {materials.map((material) => (
             <Link key={material.id} href={`/projects/${params.id}/material/${material.id}`}>
-              <Card className="cursor-pointer hover:shadow-lg transition-shadow">
+              <Card className="bg-white shadow-md hover:shadow-lg transition-shadow">
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <div>

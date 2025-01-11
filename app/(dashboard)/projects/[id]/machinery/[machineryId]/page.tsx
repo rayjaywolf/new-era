@@ -89,7 +89,7 @@ export default async function ProjectMachineryPage({
   return (
     <div className="space-y-6">
       {/* Machinery Overview */}
-      <Card>
+      <Card className="bg-white shadow-md hover:shadow-lg transition-shadow">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
@@ -132,7 +132,7 @@ export default async function ProjectMachineryPage({
 
       {/* Machinery Type Overview */}
       <div className="grid gap-4 md:grid-cols-3">
-        <Card>
+        <Card className="bg-white shadow-md hover:shadow-lg transition-shadow">
           <CardHeader>
             <CardTitle className="text-sm font-medium">
               Total Hours Used
@@ -143,7 +143,7 @@ export default async function ProjectMachineryPage({
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-white shadow-md hover:shadow-lg transition-shadow">
           <CardHeader>
             <CardTitle className="text-sm font-medium">Total Cost</CardTitle>
           </CardHeader>
@@ -154,7 +154,7 @@ export default async function ProjectMachineryPage({
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-white shadow-md hover:shadow-lg transition-shadow">
           <CardHeader>
             <CardTitle className="text-sm font-medium">Average Rate</CardTitle>
           </CardHeader>
@@ -168,7 +168,7 @@ export default async function ProjectMachineryPage({
       </div>
 
       {/* Related Machinery Usage */}
-      <Card>
+      <Card className="bg-white shadow-md hover:shadow-lg transition-shadow">
         <CardHeader>
           <CardTitle>Usage History</CardTitle>
           <CardDescription>

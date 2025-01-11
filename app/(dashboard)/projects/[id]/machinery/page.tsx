@@ -33,7 +33,7 @@ export default async function ProjectMachineryPage({ params }: ProjectMachineryP
   }
 
   return (
-    <div className="container py-8">
+    <div className="container">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-3xl font-bold">Machinery</h1>
         <AddMachineryButton projectId={params.id} />
@@ -45,7 +45,7 @@ export default async function ProjectMachineryPage({ params }: ProjectMachineryP
         <div className="grid gap-4">
           {machinery.map((item) => (
             <Link key={item.id} href={`/projects/${params.id}/machinery/${item.id}`}>
-              <Card className="cursor-pointer hover:shadow-lg transition-shadow">
+              <Card className="bg-white shadow-md hover:shadow-lg transition-shadow cursor-pointer">
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <div>
