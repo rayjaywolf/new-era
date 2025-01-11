@@ -26,8 +26,9 @@ export async function POST(req: Request) {
                 })
                 return prisma.attendance.upsert({
                     where: {
-                        workerId_date: {
+                        workerId_projectId_date: {
                             workerId,
+                            projectId,
                             date: new Date(date),
                         },
                     },
@@ -35,7 +36,6 @@ export async function POST(req: Request) {
                         present,
                         hoursWorked,
                         overtime,
-                        projectId,
                     },
                     create: {
                         workerId,

@@ -10,7 +10,7 @@ datasource db {
 
 model Project {
   id         String        @id @default(cuid())
-  projectId  String        @unique
+  projectId  String       @unique
   location   String
   clientName String
   startDate  DateTime
@@ -22,6 +22,7 @@ model Project {
   machinery MachineryUsage[]
   materials MaterialUsage[]
   attendance Attendance[]
+  advances   Advance[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -89,14 +90,20 @@ model Attendance {
 }
 
 model Advance {
-  id       String   @id @default(cuid())
-  worker   Worker   @relation(fields: [workerId], references: [id])
-  workerId String
-  amount   Float
-  date     DateTime
-  isPaid   Boolean  @default(false)
+  id        String   @id @default(cuid())
+  worker    Worker   @relation(fields: [workerId], references: [id])
+  workerId  String
+  project   Project  @relation(fields: [projectId], references: [id])
+  projectId String
+  amount    Float
+  date      DateTime
+  notes     String?
+  isPaid    Boolean  @default(false)
 
   createdAt DateTime @default(now())
+
+  @@index([workerId])
+  @@index([projectId])
 }
 
 enum MachineryType {

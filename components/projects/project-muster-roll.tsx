@@ -22,9 +22,15 @@ interface ProjectMusterRollProps {
         attendance: Attendance[]
     })[]
     date: string
+    onAttendanceUpdate?: (attendance: Record<string, { present: boolean, hoursWorked: string, overtime: string }>) => void
 }
 
-export default function ProjectMusterRoll({ projectId, workers, date }: ProjectMusterRollProps) {
+export default function ProjectMusterRoll({ 
+    projectId, 
+    workers, 
+    date,
+    onAttendanceUpdate 
+}: ProjectMusterRollProps) {
     const [attendance, setAttendance] = useState<Record<string, { present: boolean, hoursWorked: string, overtime: string }>>({})
     const [loading, setLoading] = useState(false)
 
@@ -43,7 +49,28 @@ export default function ProjectMusterRoll({ projectId, workers, date }: ProjectM
             }
         })
         setAttendance(initialAttendance)
-    }, [workers])
+        onAttendanceUpdate?.(initialAttendance)
+    }, [workers, onAttendanceUpdate])
+
+    // Update parent component whenever attendance changes
+    useEffect(() => {
+        onAttendanceUpdate?.(attendance)
+    }, [attendance, onAttendanceUpdate])
+
+    const updateAttendance = (workerId: string, data: Partial<{ present: boolean, hoursWorked: string, overtime: string }>) => {
+        setAttendance(prev => {
+            const newAttendance = {
+                ...prev,
+                [workerId]: {
+                    ...prev[workerId],
+                    ...data,
+                    // Reset hours if marking not present
+                    ...(data.present === false ? { hoursWorked: '0', overtime: '0' } : {})
+                }
+            }
+            return newAttendance
+        })
+    }
 
     // Calculate daily income for a worker
     const calculateDailyIncome = (worker: Worker, present: boolean, hoursWorked: string, overtime: string) => {
@@ -57,17 +84,6 @@ export default function ProjectMusterRoll({ projectId, workers, date }: ProjectM
     async function handleSubmit() {
         try {
             setLoading(true)
-            console.log('Submitting attendance:', {
-                date,
-                projectId,
-                attendance: Object.entries(attendance).map(([workerId, data]) => ({
-                    workerId,
-                    present: data.present,
-                    hoursWorked: data.present ? parseFloat(data.hoursWorked) || 0 : 0,
-                    overtime: data.present ? parseFloat(data.overtime) || 0 : 0,
-                }))
-            })
-            
             const response = await fetch('/api/attendance', {
                 method: 'POST',
                 headers: {
@@ -101,8 +117,13 @@ export default function ProjectMusterRoll({ projectId, workers, date }: ProjectM
 
     return (
         <div className="space-y-4">
-            <div className="flex justify-end">
-                <DatePicker date={date} />
+            <div className="flex justify-between items-center">
+                <div className="text-sm text-muted-foreground">
+                    Date: {new Date(date).toLocaleDateString()}
+                </div>
+                <Button onClick={handleSubmit} disabled={loading}>
+                    {loading ? 'Saving...' : 'Save Attendance'}
+                </Button>
             </div>
             <Table>
                 <TableHeader>
@@ -112,81 +133,65 @@ export default function ProjectMusterRoll({ projectId, workers, date }: ProjectM
                         <TableHead>Present</TableHead>
                         <TableHead>Hours Worked</TableHead>
                         <TableHead>Overtime</TableHead>
-                        <TableHead>Daily Income</TableHead>
+                        <TableHead className="text-right">Daily Income</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {workers.map((worker) => (
-                        <TableRow key={worker.id}>
-                            <TableCell>{worker.name}</TableCell>
-                            <TableCell>{worker.type}</TableCell>
-                            <TableCell>
-                                <Checkbox
-                                    checked={attendance[worker.id]?.present || false}
-                                    onCheckedChange={(checked) => setAttendance(prev => ({
-                                        ...prev,
-                                        [worker.id]: {
-                                            ...prev[worker.id],
-                                            present: checked as boolean,
-                                            hoursWorked: !checked ? '0' : prev[worker.id]?.hoursWorked || '0',
-                                            overtime: !checked ? '0' : prev[worker.id]?.overtime || '0'
-                                        }
-                                    }))}
-                                />
-                            </TableCell>
-                            <TableCell>
-                                <Input
-                                    type="number"
-                                    min="0"
-                                    max="24"
-                                    step="0.5"
-                                    value={attendance[worker.id]?.hoursWorked || '0'}
-                                    onChange={(e) => setAttendance(prev => ({
-                                        ...prev,
-                                        [worker.id]: {
-                                            ...prev[worker.id],
-                                            hoursWorked: e.target.value
-                                        }
-                                    }))}
-                                    disabled={!attendance[worker.id]?.present}
-                                    className="w-20"
-                                />
-                            </TableCell>
-                            <TableCell>
-                                <Input
-                                    type="number"
-                                    min="0"
-                                    max="24"
-                                    step="0.5"
-                                    value={attendance[worker.id]?.overtime || '0'}
-                                    onChange={(e) => setAttendance(prev => ({
-                                        ...prev,
-                                        [worker.id]: {
-                                            ...prev[worker.id],
-                                            overtime: e.target.value
-                                        }
-                                    }))}
-                                    disabled={!attendance[worker.id]?.present}
-                                    className="w-20"
-                                />
-                            </TableCell>
-                            <TableCell className="font-medium">
-                                ₹{calculateDailyIncome(
-                                    worker,
-                                    attendance[worker.id]?.present || false,
-                                    attendance[worker.id]?.hoursWorked || '0',
-                                    attendance[worker.id]?.overtime || '0'
-                                ).toFixed(2)}
-                            </TableCell>
-                        </TableRow>
-                    ))}
+                    {workers.map((worker) => {
+                        const workerAttendance = attendance[worker.id] || { present: false, hoursWorked: '0', overtime: '0' }
+                        return (
+                            <TableRow key={worker.id}>
+                                <TableCell>{worker.name}</TableCell>
+                                <TableCell>{worker.type}</TableCell>
+                                <TableCell>
+                                    <Checkbox
+                                        checked={workerAttendance.present}
+                                        onCheckedChange={(checked) => updateAttendance(worker.id, { 
+                                            present: checked as boolean 
+                                        })}
+                                    />
+                                </TableCell>
+                                <TableCell>
+                                    <Input
+                                        type="number"
+                                        min="0"
+                                        max="24"
+                                        step="0.5"
+                                        value={workerAttendance.hoursWorked}
+                                        onChange={(e) => updateAttendance(worker.id, { 
+                                            hoursWorked: e.target.value 
+                                        })}
+                                        disabled={!workerAttendance.present}
+                                        className="w-20"
+                                    />
+                                </TableCell>
+                                <TableCell>
+                                    <Input
+                                        type="number"
+                                        min="0"
+                                        max="24"
+                                        step="0.5"
+                                        value={workerAttendance.overtime}
+                                        onChange={(e) => updateAttendance(worker.id, { 
+                                            overtime: e.target.value 
+                                        })}
+                                        disabled={!workerAttendance.present}
+                                        className="w-20"
+                                    />
+                                </TableCell>
+                                <TableCell className="text-right">
+                                    ₹{calculateDailyIncome(
+                                        worker,
+                                        workerAttendance.present,
+                                        workerAttendance.hoursWorked,
+                                        workerAttendance.overtime
+                                    ).toFixed(2)}
+                                </TableCell>
+                            </TableRow>
+                        )
+                    })}
                 </TableBody>
             </Table>
-            <div className="flex justify-end">
-                <Button onClick={handleSubmit} disabled={loading}>
-                    {loading ? 'Saving...' : 'Save Attendance'}
-                </Button>
-            </div>
         </div>
     )
 }
