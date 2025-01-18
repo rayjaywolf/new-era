@@ -1,5 +1,6 @@
 import { Metadata } from "next"
 import CreateProjectForm from "@/components/projects/create-project-form"
+import { Card } from "@/components/ui/card"
 
 export const metadata: Metadata = {
     title: "Create Project | New Era Construction",
